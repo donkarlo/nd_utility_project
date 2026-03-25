@@ -13,8 +13,9 @@ class Component(ABC):
     """
 
     def __init__(self) -> None:
-        self.__name: Optional[str] = None
+        self.__name: Optional[str] = self.__class__.__name__
         self.__is_name_explicit: bool = False
+        self._parent: Optional["Component"] = None
 
     @abstractmethod
     def stringify(self) -> str:
@@ -37,9 +38,25 @@ class Component(ABC):
     def set_auto_name_if_missing(self, name: str) -> None:
         if self.has_explicit_name():
             return
-        if self.has_name():
-            return
-        self.__name = name
+        if self.__name == self.__class__.__name__:
+            self.__name = name
+
+    def set_parent(self, parent: Optional["Component"]) -> None:
+        self._parent = parent
+
+    def get_parent(self) -> Optional["Component"]:
+        return self._parent
+
+    def get_path(self) -> str:
+        path_parts = []
+        current_component: Optional["Component"] = self
+
+        while current_component is not None:
+            path_parts.append(current_component.get_name())
+            current_component = current_component.get_parent()
+
+        path_parts.reverse()
+        return "/".join(path_parts)
 
     def add_child(self, child: "Component") -> None:
         raise NotImplementedError
@@ -84,10 +101,15 @@ class Component(ABC):
         """
         Human readable label shown in the graph.
         - Explicit name is shown as-is.
-        - Otherwise show only the class name (hide auto suffix like _1).
+        - If an origin class name exists, show that.
+        - Otherwise show the real runtime class name.
         """
         if self.has_explicit_name():
             return self.get_name()
+
+        if hasattr(self, "_origin_class_name"):
+            return self._origin_class_name
+
         return self.__class__.__name__
 
     def _create_default_graphviz_dot(self):

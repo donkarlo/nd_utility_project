@@ -1,4 +1,4 @@
-class Sliceix:
+class Slice:
     def __init__(self, slc:slice):
         self._slice = slc
 

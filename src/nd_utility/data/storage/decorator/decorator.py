@@ -2,7 +2,7 @@ from typing import Any, override
 
 
 from nd_utility.data.storage.interface import Interface as StorageInterface
-from nd_utility.oop.design_pattern.structural.decorator.decorator import Decorator as BaseDecorator
+from nd_utility.oop.design_pattern.structural.decoration.decorator import Decorator as BaseDecorator
 
 class Decorator(BaseDecorator, StorageInterface):
     """

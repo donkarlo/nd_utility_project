@@ -12,7 +12,7 @@ from nd_utility.data.storage.decorator.multi_valued.observer.group_ram_values_ad
     GroupRamValuesAdditionFinishedPublisher
 from nd_utility.data.storage.decorator.multi_valued.observer.group_ram_values_addition_finished_subscriber import \
     GroupRamValuesAdditionFinishedSubscriber
-from nd_utility.data.storage.decorator.multi_valued.decorator.sliced.interface import Interface
+from nd_utility.data.storage.decorator.multi_valued.decorator.sliced.interface import Interface as MultiValuedSlicedStorageInterface
 from nd_utility.data.storage.interface import Interface as StorageInterface
 from nd_utility.oop.inheritance.overriding.override_from import override_from
 
@@ -30,7 +30,7 @@ from nd_utility.data.kind.dic.dic import Dic
 from nd_utility.os.file_system.file.file import File as OsFile
 from nd_utility.os.file_system.path.file import File as FilePath
 
-class UniKindedMultiValuedYamlFile(Interface):
+class UniKindedMultiValuedYamlFile(MultiValuedSlicedStorageInterface):
     """
     High-throughput multi-document YAML file using PyYAML (+CLoader/CDumper if available).
     - load(): loads all docs into RAM

@@ -1,4 +1,4 @@
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional, Tuple, Union
 
 from graphviz import Digraph
 
@@ -41,6 +41,17 @@ class Composite(Component):
 
         return base_name + "_" + str(count + 1)
 
+    def _normalize_child_lookup_name(self, name_or_type: Union[str, type]) -> str:
+        if isinstance(name_or_type, str):
+            if len(name_or_type.strip()) == 0:
+                raise ValueError("name must not be empty.")
+            return name_or_type
+
+        if isinstance(name_or_type, type):
+            return name_or_type.__name__
+
+        raise TypeError("name_or_type must be a str or a type.")
+
     def add_child(self, child: Component) -> None:
 
         if child is self:
@@ -54,17 +65,58 @@ class Composite(Component):
 
         auto_name = self._generate_child_auto_name(child)
         child.set_auto_name_if_missing(auto_name)
+        child.set_parent(self)
 
         self._children.add_member(child)
 
     def add_children(self, children: List[Component]) -> None:
-        self._children.add_members(children)
+        for child in children:
+            self.add_child(child)
 
     def remove_child(self, child: Component) -> None:
         self._children.remove_member(child)
+        child.set_parent(None)
 
     def has_direct_child(self, child: Component) -> bool:
         return self._has_direct_child_by_identity(child)
+
+    def find_children_by_name(self, name_or_type: Union[str, type]) -> List[Tuple[str, Component]]:
+        target_name = self._normalize_child_lookup_name(name_or_type)
+
+        found_children: List[Tuple[str, Component]] = []
+
+        for child in self.get_child_group_members():
+
+            if child.has_explicit_name():
+                match_name = child.get_name()
+            else:
+                match_name = child.__class__.__name__
+
+            if match_name == target_name:
+                found_children.append((child.get_path(), child))
+
+            if isinstance(child, Composite):
+                found_children.extend(child.find_children_by_name(target_name))
+
+        return found_children
+
+    def get_child(self, name_or_type: Union[str, type]) -> Component:
+        target_name = self._normalize_child_lookup_name(name_or_type)
+        found_children = self.find_children_by_name(target_name)
+
+        if len(found_children) == 0:
+            raise ValueError("No child found with name: " + target_name)
+
+        if len(found_children) > 1:
+            found_paths = []
+            for found_path, found_child in found_children:
+                found_paths.append(found_path)
+
+            raise ValueError(
+                "Multiple children found with name '" + target_name + "': " + str(found_paths)
+            )
+
+        return found_children[0][1]
 
     def get_child_group_members(self) -> Tuple[Component, ...]:
         return tuple(self._children)

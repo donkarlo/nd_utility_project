@@ -11,7 +11,7 @@ from nd_utility.oop.design_pattern.structural.composition.decoration.decorator i
 
 class MapToDirectory(Decorator):
 
-    def __init__(self, inner_composite: Composite, start_directory_path: Union[str, Path]) -> None:
+    def __init__(self, inner_composite: Composite, start_directory_path: Union[str, Path], children_directory_name:str, default_file_type:str) -> None:
         if not isinstance(inner_composite, Composite):
             raise TypeError("inner_composite must be an instance of Composite.")
 
@@ -19,6 +19,9 @@ class MapToDirectory(Decorator):
         self._start_directory_path = Path(start_directory_path).expanduser().resolve()
         self._renamed_file_paths: List[Tuple[Path, Path]] = []
         self._extra_paths_found: List[Path] = []
+
+        self._children_directory_name = children_directory_name
+        self._default_file_type = default_file_type
 
     def operation(self):
         return self._inner.operation()
@@ -49,7 +52,7 @@ class MapToDirectory(Decorator):
     def _export_composite(self, composite: Composite, composite_directory_path: Path) -> None:
         composite_directory_path.mkdir(parents=True, exist_ok=True)
 
-        children_directory_path = composite_directory_path / "children"
+        children_directory_path = composite_directory_path / self._children_directory_name
         children_directory_path.mkdir(parents=True, exist_ok=True)
 
         children = composite.get_child_group_members()
@@ -75,7 +78,7 @@ class MapToDirectory(Decorator):
                 )
 
     def __export_leaf(self, leaf: Component, parent_children_directory_path: Path, export_name: str) -> None:
-        file_name = self.__to_snake_case(export_name) + ".npz"
+        file_name = self.__to_snake_case(export_name) + f".{self._default_file_type}"
         file_path = parent_children_directory_path / file_name
 
         if file_path.exists():
@@ -98,7 +101,7 @@ class MapToDirectory(Decorator):
             if isinstance(child, Composite):
                 expected_entry_names.add(child_snake_name)
             else:
-                expected_entry_names.add(child_snake_name + ".npz")
+                expected_entry_names.add(child_snake_name + f".{self._default_file_type}")
 
         return expected_entry_names
 
