@@ -27,11 +27,6 @@ class Composite(Component):
         return False
 
     def _generate_child_auto_name(self, child: Component) -> str:
-        """
-        Generates an auto name like Mind_1, Mind_2, Body_1, ...
-        This is stored internally for debugging and uniqueness in naming.
-        The rendered label is still the class name unless the name was explicitly set.
-        """
         base_name = child.__class__.__name__
 
         count = 0
@@ -80,10 +75,8 @@ class Composite(Component):
     def has_direct_child(self, child: Component) -> bool:
         return self._has_direct_child_by_identity(child)
 
-    def find_children_by_name(self, name_or_type: Union[str, type]) -> List[Tuple[str, Component]]:
+    def find_component_by_name(self, name_or_type: Union[str, type]) -> Optional[Component]:
         target_name = self._normalize_child_lookup_name(name_or_type)
-
-        found_children: List[Tuple[str, Component]] = []
 
         for child in self.get_child_group_members():
 
@@ -93,30 +86,69 @@ class Composite(Component):
                 match_name = child.__class__.__name__
 
             if match_name == target_name:
-                found_children.append((child.get_path(), child))
+                return child
 
             if isinstance(child, Composite):
-                found_children.extend(child.find_children_by_name(target_name))
+                found_component = child.find_component_by_name(target_name)
+                if found_component is not None:
+                    return found_component
 
-        return found_children
+        return None
 
-    def get_child(self, name_or_type: Union[str, type]) -> Component:
+    def find_components_by_name(self, name_or_type: Union[str, type]) -> List[Tuple[str, Component]]:
+        """
+        Finds matching components in the whole subtree rooted at this composite,
+        excluding self and including all descendants.
+        """
         target_name = self._normalize_child_lookup_name(name_or_type)
-        found_children = self.find_children_by_name(target_name)
+        found_components: List[Tuple[str, Component]] = []
 
-        if len(found_children) == 0:
-            raise ValueError("No child found with name: " + target_name)
+        for child in self.get_child_group_members():
 
-        if len(found_children) > 1:
+            if child.has_explicit_name():
+                match_name = child.get_name()
+            else:
+                match_name = child.__class__.__name__
+
+            if match_name == target_name:
+                found_components.append((child.get_path(), child))
+
+            if isinstance(child, Composite):
+                found_components.extend(child.find_components_by_name(target_name))
+
+        return found_components
+
+    def find_children_by_name(self, name_or_type: Union[str, type]) -> List[Tuple[str, Component]]:
+        """
+        Backward-compatible alias.
+        Note: this searches recursively in the whole subtree, not only direct children.
+        """
+        return self.find_components_by_name(name_or_type)
+
+    def get_component(self, name_or_type: Union[str, type]) -> Component:
+        target_name = self._normalize_child_lookup_name(name_or_type)
+        found_components = self.find_components_by_name(target_name)
+
+        if len(found_components) == 0:
+            raise ValueError("No component found with name: " + target_name)
+
+        if len(found_components) > 1:
             found_paths = []
-            for found_path, found_child in found_children:
+            for found_path, found_component in found_components:
                 found_paths.append(found_path)
 
             raise ValueError(
-                "Multiple children found with name '" + target_name + "': " + str(found_paths)
+                "Multiple components found with name '" + target_name + "': " + str(found_paths)
             )
 
-        return found_children[0][1]
+        return found_components[0][1]
+
+    def get_child(self, name_or_type: Union[str, type]) -> Component:
+        """
+        Backward-compatible alias.
+        Note: this returns a unique match from the whole subtree, not only direct children.
+        """
+        return self.get_component(name_or_type)
 
     def get_child_group_members(self) -> Tuple[Component, ...]:
         return tuple(self._children)
